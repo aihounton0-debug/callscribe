@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4f46e5">
+    <title>CallScribe-Africa — Réunions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800">
+    <header class="bg-indigo-700 text-white shadow-md">
+        <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-bold">🎙️ CallScribe-Africa</h1>
+                <p class="mt-1 text-sm text-indigo-100">Vos réunions, décisions et actions au même endroit.</p>
+            </div>
+            <div class="relative w-full sm:max-w-xs">
+                <label for="globalSearch" class="sr-only">Rechercher une réunion ou une action</label>
+                <input id="globalSearch" type="search" autocomplete="off" placeholder="Rechercher partout…" class="w-full rounded-lg border border-indigo-400 bg-indigo-600 px-3 py-2 text-sm text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-white">
+                <div id="globalSearchResults" class="absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-80 overflow-y-auto rounded-lg border bg-white p-2 text-slate-800 shadow-lg" role="listbox" aria-live="polite" aria-label="Résultats de recherche"></div>
+            </div>
+            <nav class="flex flex-wrap gap-2" aria-label="Navigation principale">
+                <button class="nav-btn rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500" data-view="dashboard">Tableau de bord</button>
+                <button class="nav-btn rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500" data-view="history">Historique</button>
+                <button class="nav-btn rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500" data-view="tasks">Actions</button>
+                <button class="nav-btn rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500" data-view="settings">Paramètres</button>
+                <button class="nav-btn rounded-lg bg-indigo-600 px-3 py-2 text-sm hover:bg-indigo-500" data-view="team">Équipe</button>
+                <button class="nav-btn rounded-lg bg-white px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50" data-view="new">+ Nouvelle réunion</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-8">
+        <section id="view-dashboard" class="app-view space-y-6" aria-labelledby="dashboardTitle">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+                <div><h2 id="dashboardTitle" class="text-2xl font-bold">Tableau de bord</h2><p class="mt-1 text-sm text-slate-500">Vue d’ensemble de vos réunions et suivis.</p></div>
+                <button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700" data-go="new">Analyser une réunion</button>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-3">
+                <article class="rounded-xl border bg-white p-5 shadow-sm"><p class="text-sm text-slate-500">Réunions analysées</p><p id="statMeetings" class="mt-2 text-3xl font-bold text-indigo-700">0</p></article>
+                <article class="rounded-xl border bg-white p-5 shadow-sm"><p class="text-sm text-slate-500">Actions à suivre</p><p id="statOpen" class="mt-2 text-3xl font-bold text-amber-600">0</p></article>
+                <article class="rounded-xl border bg-white p-5 shadow-sm"><p class="text-sm text-slate-500">Actions terminées</p><p id="statDone" class="mt-2 text-3xl font-bold text-emerald-600">0</p></article>
+            </div>
+            <section class="rounded-xl border bg-white p-5 shadow-sm" aria-labelledby="recentTitle">
+                <div class="mb-4 flex items-center justify-between"><h3 id="recentTitle" class="font-semibold">Réunions récentes</h3><button class="text-sm font-medium text-indigo-700 hover:underline" data-go="history">Voir l’historique</button></div>
+                <div id="recentMeetings" class="divide-y"></div>
+            </section>
+        </section>
+
+        <section id="view-history" class="app-view hidden space-y-5" aria-labelledby="historyTitle">
+            <div><h2 id="historyTitle" class="text-2xl font-bold">Historique des réunions</h2><p class="mt-1 text-sm text-slate-500">Recherchez, consultez ou supprimez vos comptes-rendus enregistrés sur cet appareil.</p></div>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <label class="text-sm font-medium">Recherche<input id="historySearch" type="search" placeholder="Titre, participant…" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"></label>
+                <label class="text-sm font-medium">Depuis<input id="historyFrom" type="date" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                <label class="text-sm font-medium">Jusqu’au<input id="historyTo" type="date" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+                <label class="text-sm font-medium">Trier par<select id="historySort" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"><option value="newest">Plus récentes</option><option value="oldest">Plus anciennes</option><option value="title">Titre (A–Z)</option></select></label>
+            </div>
+            <div id="historyList" class="space-y-3" aria-live="polite"></div>
+        </section>
+
+        <section id="view-detail" class="app-view hidden" aria-labelledby="detailTitle">
+            <div class="mb-5 flex flex-wrap items-center justify-between gap-3"><button class="text-sm font-medium text-indigo-700 hover:underline" data-go="history">← Retour à l’historique</button><div class="flex flex-wrap gap-2"><button id="detailEditToggle" class="rounded-lg border px-3 py-2 text-sm hover:bg-white">Modifier</button><button id="detailCopy" class="rounded-lg border px-3 py-2 text-sm hover:bg-white">Copier</button><button id="detailDownload" class="rounded-lg border px-3 py-2 text-sm hover:bg-white">Télécharger .txt</button><button id="detailMarkdown" class="rounded-lg border px-3 py-2 text-sm hover:bg-white">Exporter .md</button><button id="detailPrint" class="rounded-lg border px-3 py-2 text-sm hover:bg-white">Imprimer / PDF</button></div></div>
+            <form id="meetingEditForm" class="mb-5 hidden space-y-3 rounded-xl border bg-white p-4 shadow-sm">
+                <label class="block text-sm font-medium">Titre<input id="editMeetingTitle" maxlength="120" required class="mt-1 w-full rounded-lg border px-3 py-2"></label>
+                <div class="grid gap-3 sm:grid-cols-2"><label class="block text-sm font-medium">Date<input id="editMeetingDate" type="date" class="mt-1 w-full rounded-lg border px-3 py-2"></label><label class="block text-sm font-medium">Participants<input id="editMeetingParticipants" maxlength="300" class="mt-1 w-full rounded-lg border px-3 py-2"></label></div>
+                <label class="block text-sm font-medium">Résumé<textarea id="editMeetingSummary" rows="4" class="mt-1 w-full rounded-lg border px-3 py-2"></textarea></label>
+                <div class="flex gap-2"><button class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white" type="submit">Enregistrer</button><button id="cancelMeetingEdit" class="rounded-lg border px-4 py-2 text-sm" type="button">Annuler</button></div>
+            </form>
+            <article class="space-y-5 rounded-xl border bg-white p-6 shadow-sm">
+                <div class="border-b pb-4"><h2 id="detailTitle" class="text-2xl font-bold"></h2><p id="detailMeta" class="mt-2 text-sm text-slate-500"></p></div>
+                <div><h3 class="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-600">Résumé exécutif</h3><p id="detailSummary" class="whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm leading-6"></p></div>
+                <div><h3 class="mb-2 text-xs font-bold uppercase tracking-wider text-indigo-600">Actions à mener</h3><div id="detailActions" class="space-y-2"></div></div>
+                <details id="transcriptBlock" class="hidden"><summary class="cursor-pointer font-semibold text-indigo-700">Afficher la transcription</summary><p id="detailTranscript" class="mt-3 whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm leading-6"></p></details>
+                <p id="detailStatus" class="hidden text-sm text-emerald-700" role="status" aria-live="polite"></p>
+            </article>
+        </section>
+
+        <section id="view-tasks" class="app-view hidden space-y-5" aria-labelledby="tasksTitle">
+            <div><h2 id="tasksTitle" class="text-2xl font-bold">Suivi des actions</h2><p class="mt-1 text-sm text-slate-500">Attribuez un responsable, une échéance et un statut aux actions détectées.</p></div>
+            <label class="block text-sm font-medium">Rechercher une action<input id="taskSearch" type="search" placeholder="Mot-clé, responsable ou réunion…" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"></label>
+            <div class="flex flex-wrap items-end justify-between gap-3"><div class="grid flex-1 gap-3 sm:grid-cols-2"><label class="text-sm font-medium">Filtrer par statut<select id="taskFilter" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"><option value="all">Tous les statuts</option><option value="À faire">À faire</option><option value="En cours">En cours</option><option value="Terminé">Terminé</option></select></label><label class="text-sm font-medium">Filtrer par responsable<select id="ownerFilter" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"><option value="all">Toute l’équipe</option></select></label></div><button id="exportTasks" type="button" class="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:bg-slate-50">Exporter les actions en CSV</button></div>
+            <div id="taskList" class="space-y-3"></div>
+        </section>
+
+        <section id="view-settings" class="app-view hidden" aria-labelledby="settingsTitle">
+            <div class="mb-5"><h2 id="settingsTitle" class="text-2xl font-bold">Paramètres</h2><p class="mt-1 text-sm text-slate-500">Préférences locales pour les prochaines analyses.</p></div>
+            <form id="settingsForm" class="max-w-2xl space-y-5 rounded-xl border bg-white p-6 shadow-sm">
+                <label class="block text-sm font-medium">Langue de transcription<select id="settingLanguage" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"><option value="fr">Français</option><option value="en">English</option><option value="sw">Kiswahili</option><option value="ar">العربية</option></select></label>
+                <label class="block text-sm font-medium">Format de compte-rendu<select id="settingFormat" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"><option value="concise">Synthétique</option><option value="detailed">Détaillé</option></select></label>
+                <label class="block text-sm font-medium">Webhook d’analyse n8n<input id="settingWebhook" type="url" placeholder="https://…" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"></label>
+                <div class="flex flex-wrap items-center gap-3"><button class="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700" type="submit">Enregistrer les paramètres</button><p id="settingsStatus" class="text-sm text-emerald-700" role="status" aria-live="polite"></p></div>
+            </form>
+        </section>
+
+        <section id="view-team" class="app-view hidden space-y-5" aria-labelledby="teamTitle">
+            <div><h2 id="teamTitle" class="text-2xl font-bold">Équipe</h2><p class="mt-1 text-sm text-slate-500">Gérez une liste locale de membres pour attribuer les actions.</p></div>
+            <form id="teamForm" class="flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm sm:flex-row"><label class="flex-1"><span class="sr-only">Nom du membre</span><input id="memberName" maxlength="80" required placeholder="Nom du membre" class="w-full rounded-lg border border-slate-300 px-3 py-2"></label><label class="flex-1"><span class="sr-only">Adresse e-mail (facultative)</span><input id="memberEmail" type="email" maxlength="120" placeholder="Adresse e-mail (facultative)" class="w-full rounded-lg border border-slate-300 px-3 py-2"></label><button class="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700">Ajouter un membre</button></form>
+            <div id="teamList" class="space-y-3"></div>
+        </section>
+
+        <section id="view-new" class="app-view hidden" aria-labelledby="formTitle">
+            <div class="mb-5"><h2 id="formTitle" class="text-2xl font-bold">Nouvelle réunion à analyser</h2><p class="mt-1 text-sm text-slate-500">Ajoutez un enregistrement pour générer un compte-rendu structuré.</p></div>
+            <form id="uploadForm" class="space-y-4 rounded-xl border border-slate-200 bg-white p-6 shadow-sm" novalidate>
+                <div><label for="meetingTitle" class="mb-1 block text-sm font-medium">Titre de la réunion <span aria-hidden="true">*</span></label><input type="text" id="meetingTitle" name="title" required maxlength="120" autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ex. : Point commercial — Projet X"></div>
+                <div class="grid gap-4 sm:grid-cols-2"><div><label for="meetingDate" class="mb-1 block text-sm font-medium">Date de la réunion <span class="font-normal text-slate-500">(facultatif)</span></label><input type="date" id="meetingDate" name="date" class="w-full rounded-lg border border-slate-300 px-3 py-2"></div><div><label for="participants" class="mb-1 block text-sm font-medium">Participants <span class="font-normal text-slate-500">(facultatif)</span></label><input type="text" id="participants" name="participants" maxlength="300" class="w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Ex. : Amina, Paul, Fatou"></div></div>
+                <div><p class="mb-1 text-sm font-medium">Fichier audio <span aria-hidden="true">*</span></p><label id="dropZone" for="audioFile" class="flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed border-slate-300 px-4 py-6 text-center transition hover:border-indigo-400 hover:bg-indigo-50 focus-within:ring-2 focus-within:ring-indigo-500"><span class="text-sm font-medium">Déposez votre fichier audio ici</span><span class="my-1 text-xs text-slate-500">ou</span><span class="rounded-md bg-indigo-50 px-3 py-1.5 text-sm font-semibold text-indigo-700">Choisir un fichier</span><span class="mt-2 text-xs text-slate-500">MP3, WAV ou M4A · 50 Mo maximum</span><input type="file" id="audioFile" name="audio" accept=".mp3,.wav,.m4a,audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a" class="sr-only"></label><div id="fileDetails" class="mt-3 hidden rounded-lg bg-slate-50 p-3" aria-live="polite"><div class="flex flex-wrap items-center justify-between gap-2"><p id="fileName" class="break-all text-sm font-medium"></p><button type="button" id="removeFileBtn" class="text-sm font-medium text-red-600 underline">Retirer</button></div><audio id="audioPreview" class="mt-3 hidden w-full" controls></audio></div></div>
+                <p id="errorMessage" class="hidden rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert"></p><div class="flex flex-col gap-3 sm:flex-row"><button type="submit" id="submitBtn" class="flex flex-1 items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60">Lancer l’analyse par l’IA</button><button type="reset" class="rounded-lg border border-slate-300 px-4 py-2.5 font-medium hover:bg-slate-50">Réinitialiser</button></div>
+            </form>
+            <section id="loader" class="mt-5 hidden rounded-xl border border-indigo-100 bg-white p-6" role="status" aria-live="polite" aria-atomic="true"><h2 class="font-semibold">Analyse en cours…</h2><ol class="mt-4 space-y-3 text-sm" aria-label="Étapes de traitement"><li id="stepUpload" class="flex items-center gap-3 text-indigo-700"><span class="stepIcon flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 font-semibold">1</span><span>Envoi du fichier</span></li><li id="stepAnalyze" class="flex items-center gap-3 text-slate-500"><span class="stepIcon flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 font-semibold">2</span><span>Transcription et analyse</span></li><li id="stepResult" class="flex items-center gap-3 text-slate-500"><span class="stepIcon flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 font-semibold">3</span><span>Réception du compte-rendu</span></li></ol><p id="uploadProgress" class="mt-3 text-xs text-slate-500"></p></section>
+        </section>
+    </main>
+    <footer class="mt-8 border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400">CallScribe-Africa &bull; Propulsé par n8n & IA</footer>
+
+    <script>
+        const STORAGE = { meetings: 'callscribe.meetings', tasks: 'callscribe.tasks', team: 'callscribe.team', settings: 'callscribe.settings' };
+        const $ = (id) => document.getElementById(id);
+        const read = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
+        const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+        let meetings = read(STORAGE.meetings, []);
+        let tasks = read(STORAGE.tasks, []);
+        let team = read(STORAGE.team, []);
+        let settings = read(STORAGE.settings, { language: 'fr', format: 'concise', webhook: 'https://jos-3.app.n8n.cloud/webhook/callscribe-audio' });
+        if (!settings.webhook || settings.webhook === 'https://jos-3.app.n8n.cloud/webhook-test/callscribe-audio') settings.webhook = 'https://jos-3.app.n8n.cloud/webhook/callscribe-audio';
+        let activeMeetingId = null;
+        let previewUrl = null;
+        let reportText = '';
+        const MAX_FILE_SIZE = 50 * 1024 * 1024;
+        const ALLOWED_EXTENSIONS = ['mp3', 'wav', 'm4a'];
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+        }
+        function showView(name) {
+            document.querySelectorAll('.app-view').forEach((view) => view.classList.toggle('hidden', view.id !== `view-${name}`));
+            document.querySelectorAll('.nav-btn').forEach((button) => {
+                const active = button.dataset.view === name;
+                button.classList.toggle('ring-2', active);
+                button.classList.toggle('ring-white', active);
+                if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
+            });
+            $('globalSearchResults').classList.add('hidden');
+            if (name === 'dashboard') renderDashboard();
+            if (name === 'history') renderHistory();
+            if (name === 'tasks') renderTasks();
+            if (name === 'team') renderTeam();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => showView(button.dataset.view)));
+        document.querySelectorAll('[data-go]').forEach((button) => button.addEventListener('click', () => showView(button.dataset.go)));
+
+        function meetingRow(meeting) {
+            const meta = [meeting.date, meeting.participants].filter(Boolean).join(' · ') || 'Aucune information complémentaire';
+            return `<article class="flex flex-wrap items-center justify-between gap-3 py-4"><button class="min-w-0 flex-1 text-left" data-open-meeting="${escapeHtml(meeting.id)}"><span class="block truncate font-semibold text-indigo-700 hover:underline">${escapeHtml(meeting.title)}</span><span class="mt-1 block text-xs text-slate-500">${escapeHtml(meta)}</span></button><button class="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50" data-delete-meeting="${escapeHtml(meeting.id)}">Supprimer</button></article>`;
+        }
+        function renderDashboard() {
+            $('statMeetings').textContent = meetings.length;
+            $('statOpen').textContent = tasks.filter((task) => task.status !== 'Terminé').length;
+            $('statDone').textContent = tasks.filter((task) => task.status === 'Terminé').length;
+            const recent = [...meetings].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
+            $('recentMeetings').innerHTML = recent.length ? recent.map(meetingRow).join('') : '<p class="py-6 text-sm text-slate-500">Aucune réunion pour le moment. Lancez votre première analyse.</p>';
+            bindMeetingButtons();
+        }
+        function renderHistory() {
+            const query = ($('historySearch').value || '').trim().toLocaleLowerCase('fr');
+            const from = $('historyFrom').value;
+            const to = $('historyTo').value;
+            const sort = $('historySort').value;
+            const matches = [...meetings].filter((item) => {
+                const searchable = `${item.title} ${item.date} ${item.participants}`.toLocaleLowerCase('fr');
+                const meetingDate = item.date || '';
+                return searchable.includes(query) && (!from || meetingDate >= from) && (!to || meetingDate <= to);
+            }).sort((a, b) => sort === 'title' ? a.title.localeCompare(b.title, 'fr') : sort === 'oldest' ? a.createdAt - b.createdAt : b.createdAt - a.createdAt);
+            $('historyList').innerHTML = matches.length ? matches.map(meetingRow).join('') : '<div class="rounded-xl border bg-white p-6 text-sm text-slate-600"><p>Aucune réunion ne correspond à ces critères.</p><button type="button" class="mt-3 font-medium text-indigo-700 hover:underline" id="clearHistoryFilters">Effacer les filtres</button></div>';
+            $('clearHistoryFilters')?.addEventListener('click', () => { $('historySearch').value = ''; $('historyFrom').value = ''; $('historyTo').value = ''; $('historySort').value = 'newest'; renderHistory(); });
+            bindMeetingButtons();
+        }
+        function bindMeetingButtons() {
+            document.querySelectorAll('[data-open-meeting]').forEach((button) => button.addEventListener('click', () => openMeeting(button.dataset.openMeeting)));
+            document.querySelectorAll('[data-delete-meeting]').forEach((button) => button.addEventListener('click', () => deleteMeeting(button.dataset.deleteMeeting)));
+        }
+        function openMeeting(id) {
+            const meeting = meetings.find((item) => item.id === id);
+            if (!meeting) return;
+            activeMeetingId = id;
+            $('meetingEditForm').classList.add('hidden');
+            $('editMeetingTitle').value = meeting.title || '';
+            $('editMeetingDate').value = meeting.date || '';
+            $('editMeetingParticipants').value = meeting.participants || '';
+            $('editMeetingSummary').value = meeting.summary || '';
+            $('detailTitle').textContent = meeting.title;
+            $('detailMeta').textContent = [meeting.date, meeting.participants, new Date(meeting.createdAt).toLocaleDateString('fr-FR')].filter(Boolean).join(' · ');
+            $('detailSummary').textContent = meeting.summary || 'Aucun résumé disponible.';
+            $('detailActions').innerHTML = meeting.actions.length ? meeting.actions.map((action) => `<p class="rounded-lg bg-slate-50 p-3 text-sm">• ${escapeHtml(action)}</p>`).join('') : '<p class="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">Aucune action spécifique identifiée.</p>';
+            $('transcriptBlock').classList.toggle('hidden', !meeting.transcript);
+            $('detailTranscript').textContent = meeting.transcript || '';
+            $('detailStatus').classList.add('hidden');
+            reportText = `Compte-rendu : ${meeting.title}\n${meeting.date || ''}\n${meeting.participants || ''}\n\nRésumé exécutif\n${meeting.summary || 'Aucun résumé disponible.'}\n\nActions à mener\n${meeting.actions.length ? meeting.actions.map((action) => `• ${action}`).join('\n') : 'Aucune action spécifique identifiée.'}`;
+            showView('detail');
+        }
+        function deleteMeeting(id) {
+            const meeting = meetings.find((item) => item.id === id);
+            if (!meeting || !window.confirm(`Supprimer « ${meeting.title} » et les actions associées ? Cette opération est définitive.`)) return;
+            meetings = meetings.filter((item) => item.id !== id);
+            tasks = tasks.filter((task) => task.meetingId !== id);
+            save(STORAGE.meetings, meetings); save(STORAGE.tasks, tasks);
+            const current = document.querySelector('.app-view:not(.hidden)')?.id;
+            if (current === 'view-history') renderHistory(); else renderDashboard();
+        }
+        ['historySearch', 'historyFrom', 'historyTo', 'historySort'].forEach((id) => $(id).addEventListener(id === 'historySearch' ? 'input' : 'change', renderHistory));
+        $('globalSearch').addEventListener('input', () => {
+            const query = $('globalSearch').value.trim().toLocaleLowerCase('fr');
+            const results = $('globalSearchResults');
+            if (!query) { results.classList.add('hidden'); results.innerHTML = ''; return; }
+            const matchingMeetings = meetings.filter((item) => `${item.title} ${item.date} ${item.participants} ${item.summary}`.toLocaleLowerCase('fr').includes(query)).slice(0, 5);
+            const matchingTasks = tasks.filter((task) => `${task.text} ${task.owner} ${task.status}`.toLocaleLowerCase('fr').includes(query)).slice(0, 5);
+            results.innerHTML = [...matchingMeetings.map((item) => `<button type="button" role="option" data-search-meeting="${escapeHtml(item.id)}" class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-indigo-50"><span class="font-medium">Réunion : ${escapeHtml(item.title)}</span><span class="block text-xs text-slate-500">${escapeHtml(item.date || 'Date non renseignée')}</span></button>`), ...matchingTasks.map((task) => `<button type="button" role="option" data-search-task="${escapeHtml(task.id)}" class="block w-full rounded px-3 py-2 text-left text-sm hover:bg-indigo-50"><span class="font-medium">Action : ${escapeHtml(task.text)}</span><span class="block text-xs text-slate-500">${escapeHtml(task.status || 'À faire')}</span></button>`)].join('') || '<p class="p-3 text-sm text-slate-500">Aucun résultat.</p>';
+            results.classList.remove('hidden');
+            results.querySelectorAll('[data-search-meeting]').forEach((button) => button.addEventListener('click', () => { $('globalSearch').value = ''; openMeeting(button.dataset.searchMeeting); results.classList.add('hidden'); }));
+            results.querySelectorAll('[data-search-task]').forEach((button) => button.addEventListener('click', () => { const task = tasks.find((item) => item.id === button.dataset.searchTask); $('globalSearch').value = ''; $('taskSearch').value = task?.text || ''; $('taskFilter').value = 'all'; $('ownerFilter').value = 'all'; showView('tasks'); results.classList.add('hidden'); }));
+        });
+        document.addEventListener('click', (event) => { if (!event.target.closest('#globalSearch') && !event.target.closest('#globalSearchResults')) $('globalSearchResults').classList.add('hidden'); });
+        $('detailCopy').addEventListener('click', async () => {
+            try { await navigator.clipboard.writeText(reportText); $('detailStatus').textContent = 'Compte-rendu copié dans le presse-papiers.'; }
+            catch { $('detailStatus').textContent = 'Copie impossible dans ce navigateur.'; }
+            $('detailStatus').classList.remove('hidden');
+        });
+        $('detailEditToggle').addEventListener('click', () => $('meetingEditForm').classList.toggle('hidden'));
+        $('cancelMeetingEdit').addEventListener('click', () => $('meetingEditForm').classList.add('hidden'));
+        $('meetingEditForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const meeting = meetings.find((item) => item.id === activeMeetingId);
+            if (!meeting) return;
+            meeting.title = $('editMeetingTitle').value.trim();
+            meeting.date = $('editMeetingDate').value;
+            meeting.participants = $('editMeetingParticipants').value.trim();
+            meeting.summary = $('editMeetingSummary').value.trim();
+            save(STORAGE.meetings, meetings);
+            openMeeting(meeting.id);
+            $('detailStatus').textContent = 'Modifications enregistrées.';
+            $('detailStatus').classList.remove('hidden');
+        });
+        $('detailMarkdown').addEventListener('click', () => {
+            const meeting = meetings.find((item) => item.id === activeMeetingId);
+            const markdown = `# ${meeting?.title || 'Compte-rendu'}\n\n${meeting?.date || ''}${meeting?.participants ? ` · ${meeting.participants}` : ''}\n\n## Résumé exécutif\n\n${meeting?.summary || 'Aucun résumé disponible.'}\n\n## Actions à mener\n\n${meeting?.actions?.length ? meeting.actions.map((action) => `- ${action}`).join('\n') : 'Aucune action spécifique identifiée.'}${meeting?.transcript ? `\n\n## Transcription\n\n${meeting.transcript}` : ''}`;
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }));
+            link.download = 'compte-rendu.md'; link.click(); URL.revokeObjectURL(link.href);
+        });
+        $('detailPrint').addEventListener('click', () => {
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) { $('detailStatus').textContent = 'Autorisez les fenêtres contextuelles pour imprimer le compte-rendu.'; $('detailStatus').classList.remove('hidden'); return; }
+            printWindow.document.write(`<title>Compte-rendu</title><pre style="font: 15px/1.6 sans-serif; white-space: pre-wrap; max-width: 800px; margin: 40px auto">${escapeHtml(reportText)}</pre>`);
+            printWindow.document.close(); printWindow.focus(); printWindow.print();
+        });
+        $('detailDownload').addEventListener('click', () => {
+            const meeting = meetings.find((item) => item.id === activeMeetingId);
+            const blobUrl = URL.createObjectURL(new Blob([reportText], { type: 'text/plain;charset=utf-8' }));
+            const link = document.createElement('a');
+            link.href = blobUrl; link.download = `${(meeting?.title || 'compte-rendu').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'compte-rendu'}.txt`;
+            link.click(); URL.revokeObjectURL(blobUrl);
+        });
+
+        function renderTasks() {
+            const ownerSelect = $('ownerFilter');
+            const selectedOwner = ownerSelect.value || 'all';
+            ownerSelect.innerHTML = '<option value="all">Toute l’équipe</option>' + team.map((member) => `<option value="${escapeHtml(member.name)}">${escapeHtml(member.name)}</option>`).join('');
+            ownerSelect.value = team.some((member) => member.name === selectedOwner) ? selectedOwner : 'all';
+            const statusFilter = $('taskFilter').value;
+            const query = $('taskSearch').value.trim().toLocaleLowerCase('fr');
+            const visible = tasks.filter((task) => (statusFilter === 'all' || task.status === statusFilter) && (ownerSelect.value === 'all' || task.owner === ownerSelect.value) && `${task.text} ${task.owner} ${task.status} ${meetings.find((m) => m.id === task.meetingId)?.title || ''}`.toLocaleLowerCase('fr').includes(query));
+            $('taskList').innerHTML = visible.length ? visible.map((task) => `<article class="grid gap-3 rounded-xl border bg-white p-4 shadow-sm lg:grid-cols-[1fr_140px_140px_140px_130px]"><div><p class="font-medium">${escapeHtml(task.text)}</p><p class="mt-1 text-xs text-slate-500">Réunion : ${escapeHtml(meetings.find((m) => m.id === task.meetingId)?.title || 'Réunion supprimée')}</p></div><label class="text-xs font-medium">Responsable<select data-task-owner="${escapeHtml(task.id)}" class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5"><option value="">Non attribué</option>${team.map((member) => `<option ${task.owner === member.name ? 'selected' : ''} value="${escapeHtml(member.name)}">${escapeHtml(member.name)}</option>`).join('')}</select></label><label class="text-xs font-medium">Échéance<input data-task-due="${escapeHtml(task.id)}" type="date" value="${escapeHtml(task.due || '')}" class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5"></label><label class="text-xs font-medium">Priorité<select data-task-priority="${escapeHtml(task.id)}" class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5"><option ${task.priority === 'Basse' ? 'selected' : ''}>Basse</option><option ${!task.priority || task.priority === 'Normale' ? 'selected' : ''}>Normale</option><option ${task.priority === 'Haute' ? 'selected' : ''}>Haute</option></select></label><label class="text-xs font-medium">Statut<select data-task-status="${escapeHtml(task.id)}" class="mt-1 w-full rounded border border-slate-300 px-2 py-1.5"><option ${task.status === 'À faire' ? 'selected' : ''}>À faire</option><option ${task.status === 'En cours' ? 'selected' : ''}>En cours</option><option ${task.status === 'Terminé' ? 'selected' : ''}>Terminé</option></select></label></article>`).join('') : '<div class="rounded-xl border bg-white p-6 text-sm text-slate-600"><p>Aucune action ne correspond à ces filtres.</p><button type="button" id="clearTaskFilters" class="mt-3 font-medium text-indigo-700 hover:underline">Effacer la recherche et les filtres</button></div>';
+            $('clearTaskFilters')?.addEventListener('click', () => { $('taskSearch').value = ''; $('taskFilter').value = 'all'; $('ownerFilter').value = 'all'; renderTasks(); });
+            document.querySelectorAll('[data-task-owner]').forEach((input) => input.addEventListener('change', () => updateTask(input.dataset.taskOwner, 'owner', input.value)));
+            document.querySelectorAll('[data-task-due]').forEach((input) => input.addEventListener('change', () => updateTask(input.dataset.taskDue, 'due', input.value)));
+            document.querySelectorAll('[data-task-status]').forEach((input) => input.addEventListener('change', () => updateTask(input.dataset.taskStatus, 'status', input.value)));
+            document.querySelectorAll('[data-task-priority]').forEach((input) => input.addEventListener('change', () => updateTask(input.dataset.taskPriority, 'priority', input.value)));
+        }
+        function updateTask(id, property, value) { const task = tasks.find((item) => item.id === id); if (task) { task[property] = value; save(STORAGE.tasks, tasks); renderTasks(); } }
+        $('taskFilter').addEventListener('change', renderTasks);
+        $('ownerFilter').addEventListener('change', renderTasks);
+        $('taskSearch').addEventListener('input', renderTasks);
+        $('exportTasks').addEventListener('click', () => {
+            const rows = [['Action', 'Réunion', 'Responsable', 'Échéance', 'Priorité', 'Statut'], ...tasks.map((task) => [task.text, meetings.find((meeting) => meeting.id === task.meetingId)?.title || 'Réunion supprimée', task.owner || '', task.due || '', task.priority || 'Normale', task.status || 'À faire'])];
+            const csv = rows.map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+            const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }));
+            const link = document.createElement('a'); link.href = url; link.download = 'actions-callscribe.csv'; link.click(); URL.revokeObjectURL(url);
+        });
+
+        function renderTeam() {
+            $('teamList').innerHTML = team.length ? team.map((member) => `<article class="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4"><div><p class="font-semibold">${escapeHtml(member.name)}</p><p class="text-sm text-slate-500">${escapeHtml(member.email || 'Aucune adresse e-mail')}</p></div><button class="rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50" data-remove-member="${escapeHtml(member.id)}">Retirer</button></article>`).join('') : '<p class="rounded-xl border bg-white p-6 text-sm text-slate-500">Ajoutez des membres pour pouvoir leur attribuer des actions.</p>';
+            document.querySelectorAll('[data-remove-member]').forEach((button) => button.addEventListener('click', () => {
+                const member = team.find((item) => item.id === button.dataset.removeMember);
+                if (!member || !window.confirm(`Retirer ${member.name} de l’équipe ? Ses actions seront désattribuées.`)) return;
+                team = team.filter((item) => item.id !== button.dataset.removeMember);
+                tasks.forEach((task) => { if (member && task.owner === member.name) task.owner = ''; });
+                save(STORAGE.team, team); save(STORAGE.tasks, tasks); renderTeam();
+            }));
+        }
+        $('teamForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const name = $('memberName').value.trim();
+            if (!name) { $('memberName').focus(); return; }
+            if (team.some((member) => member.name.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr'))) { window.alert('Ce membre figure déjà dans l’équipe.'); return; }
+            team.push({ id: crypto.randomUUID(), name, email: $('memberEmail').value.trim() });
+            save(STORAGE.team, team); $('teamForm').reset(); renderTeam();
+        });
+
+        $('settingLanguage').value = settings.language || 'fr';
+        $('settingFormat').value = settings.format || 'concise';
+        $('settingWebhook').value = settings.webhook || '';
+        $('settingsForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            settings = { language: $('settingLanguage').value, format: $('settingFormat').value, webhook: $('settingWebhook').value.trim() };
+            save(STORAGE.settings, settings);
+            $('settingsStatus').textContent = 'Paramètres enregistrés dans ce navigateur.';
+            window.setTimeout(() => { $('settingsStatus').textContent = ''; }, 3000);
+        });
+
+        const form = $('uploadForm');
+        const audioInput = $('audioFile');
+        function showError(message) { $('errorMessage').textContent = message; $('errorMessage').classList.remove('hidden'); }
+        function clearPreview() {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            previewUrl = null; audioInput.value = ''; $('fileDetails').classList.add('hidden'); $('audioPreview').classList.add('hidden'); $('audioPreview').removeAttribute('src'); $('fileName').textContent = '';
+        }
+        function validateAudio(file) {
+            if (!file) return 'Veuillez sélectionner un fichier audio.';
+            if (!ALLOWED_EXTENSIONS.includes(file.name.split('.').pop().toLowerCase())) return 'Format non pris en charge. Sélectionnez un fichier MP3, WAV ou M4A.';
+            if (file.size > MAX_FILE_SIZE) return 'Le fichier dépasse la limite de 50 Mo.';
+            if (!file.size) return 'Le fichier sélectionné est vide.';
+            return '';
+        }
+        function selectFile(file) {
+            const error = validateAudio(file);
+            if (error) { clearPreview(); showError(error); return; }
+            $('errorMessage').classList.add('hidden'); clearPreview();
+            const transfer = new DataTransfer(); transfer.items.add(file); audioInput.files = transfer.files;
+            $('fileName').textContent = `${file.name} · ${(file.size / (1024 * 1024)).toFixed(2)} Mo`;
+            $('fileDetails').classList.remove('hidden'); previewUrl = URL.createObjectURL(file); $('audioPreview').src = previewUrl; $('audioPreview').classList.remove('hidden');
+        }
+        audioInput.addEventListener('change', () => { if (audioInput.files[0]) selectFile(audioInput.files[0]); });
+        const dropZone = $('dropZone');
+        ['dragenter', 'dragover'].forEach((name) => dropZone.addEventListener(name, (event) => { event.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50'); }));
+        ['dragleave', 'drop'].forEach((name) => dropZone.addEventListener(name, (event) => { event.preventDefault(); dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'); }));
+        dropZone.addEventListener('drop', (event) => { if (event.dataTransfer.files[0]) selectFile(event.dataTransfer.files[0]); });
+        $('removeFileBtn').addEventListener('click', () => { clearPreview(); $('errorMessage').classList.add('hidden'); });
+        form.addEventListener('reset', () => { clearPreview(); $('errorMessage').classList.add('hidden'); $('loader').classList.add('hidden'); });
+        function setStep(activeStep) {
+            [ $('stepUpload'), $('stepAnalyze'), $('stepResult') ].forEach((step, index) => {
+                const active = index <= activeStep;
+                step.classList.toggle('text-indigo-700', active); step.classList.toggle('text-slate-500', !active);
+                const icon = step.querySelector('.stepIcon'); icon.classList.toggle('bg-indigo-100', active); icon.classList.toggle('bg-slate-100', !active); icon.textContent = index < activeStep ? '✓' : String(index + 1);
+            });
+        }
+        function finishRequest() { $('loader').classList.add('hidden'); $('submitBtn').disabled = false; }
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            if ($('submitBtn').disabled) return;
+            $('errorMessage').classList.add('hidden');
+            if (!form.reportValidity()) return;
+            const file = audioInput.files[0]; const validationError = validateAudio(file);
+            if (validationError) { showError(validationError); return; }
+            if (!settings.webhook) { showError('Ajoutez l’URL de votre webhook dans Paramètres avant de lancer l’analyse.'); return; }
+            const titleKey = $('meetingTitle').value.trim().toLocaleLowerCase('fr');
+            const meetingDate = $('meetingDate').value;
+            if (meetings.some((meeting) => meeting.title.toLocaleLowerCase('fr') === titleKey && meeting.date === meetingDate) && !window.confirm('Une réunion avec ce titre et cette date existe déjà. Continuer l’analyse ?')) return;
+            const payload = new FormData(form);
+            payload.append('language', settings.language || 'fr'); payload.append('reportFormat', settings.format || 'concise');
+            $('loader').classList.remove('hidden'); $('submitBtn').disabled = true; setStep(0); $('uploadProgress').textContent = 'Préparation de l’envoi…';
+            const request = new XMLHttpRequest(); request.open('POST', settings.webhook); request.timeout = 5 * 60 * 1000;
+            request.upload.addEventListener('progress', (e) => { if (e.lengthComputable) $('uploadProgress').textContent = `Envoi du fichier : ${Math.round((e.loaded / e.total) * 100)} %`; });
+            request.upload.addEventListener('load', () => { setStep(1); $('uploadProgress').textContent = 'Fichier envoyé. Transcription et analyse en cours…'; });
+            request.addEventListener('load', () => {
+                if (request.status < 200 || request.status >= 300) { showError(`Le serveur a répondu avec le statut ${request.status}.`); finishRequest(); return; }
+                let data; try { data = JSON.parse(request.responseText); } catch { showError('La réponse du serveur n’est pas au format JSON attendu.'); finishRequest(); return; }
+                setStep(2);
+                const rawActions = Array.isArray(data.actions) ? data.actions : [];
+                const actions = rawActions.map((action) => typeof action === 'string' ? action : (action?.text || action?.action || JSON.stringify(action)));
+                const meeting = { id: crypto.randomUUID(), title: $('meetingTitle').value.trim(), date: $('meetingDate').value, participants: $('participants').value.trim(), summary: String(data.summary || data.summary_executif || 'Aucun résumé disponible.'), actions, transcript: String(data.transcript || data.transcription || ''), createdAt: Date.now() };
+                meetings.push(meeting);
+                actions.forEach((text) => tasks.push({ id: crypto.randomUUID(), meetingId: meeting.id, text, owner: '', due: '', priority: 'Normale', status: 'À faire' }));
+                try { save(STORAGE.meetings, meetings); save(STORAGE.tasks, tasks); } catch { showError('Stockage local saturé : votre compte-rendu ne peut pas être conservé dans ce navigateur.'); finishRequest(); return; }
+                finishRequest(); openMeeting(meeting.id);
+            });
+            request.addEventListener('error', () => { showError('La requête a été bloquée ou le serveur est inaccessible. Vérifiez que le workflow n8n est actif, que l’URL de production est correcte et que la réponse du webhook autorise l’origine de cette page (CORS). Cette autorisation doit être configurée côté n8n.'); finishRequest(); });
+            request.addEventListener('timeout', () => { showError('L’analyse a dépassé le délai d’attente. Vérifiez l’état du workflow avant de réessayer.'); finishRequest(); });
+            request.send(payload);
+        });
+        renderDashboard();
+    </script>
+</body>
+</html>
